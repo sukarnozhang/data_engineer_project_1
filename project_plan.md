@@ -1,30 +1,27 @@
-# Intraday Stock
-A ETL project that retrieves incremental intraday stock data from IEXCloud API on minute to minute basis is aimed to transformed to per day analysis data for per stock.
-## Requirements
-- iexfinance==0.5.0
-- jupyter==1.0.0
-- pandas==1.4.3
-- requests==2.28.1
-- SQLAlchemy==1.4.39
-- pyarrow==8.0.0
-- pg8000==1.29.1
-- pytest==7.1.2
-- pylint==2.14.4
-- pyyaml==6.0
-- Jinja2==3.1.2
-- schedule==1.1.0
+# Project plan
+## Objective
+Stock Market Investing is a tough job for retail investors. You can either rely on Fund Managers or do your own analysis to find the right stocks.
+With this project we want to provide insights to investors to make better investing/trading decisions.
+## Consumers
+What users would find your data useful? How do they want to access the data?
+Retail Investors and Data analysts are able to pull the data from AWS Services like RDS and S3.
+## Questions
+What questions are you trying to answer with your data? How will your data support your users?
 
-## Installation
-```sh
-pip install -r requirements.txt
-```
-## Configuration
-- config_stock_code.yaml - Contains the list of Stock symbols to fetch the intraday stocks data
-- config.bat - Configure this file with iex_api_key, db_user, db_password, db_server_name, db_database_name if you want to run the project locally in Windows
-- config.sh - Configure this file with iex_api_key, db_user, db_password, db_server_name, db_database_name if you want to run the project locally in Linux/Mac
-- config.yaml - Contains log table name
-- .env file - This file is required to build and run the docker image on Cloud
-
+Most stable stocks from each sector for each day. This would help retail investors in planning their intraday shortterm trades.
+Best stocks for Intraday swing trading, based on most variance/swing. This would help retail investors in planning their intraday and swing trades.
+Upward momentum stocks for monthly Calls. This would help retail investors in Option trading for Calls.
+Downward momentum for daily Puts. This would help retail investors in Option trading for Puts.
+## Source datasets
+What datasets are you sourcing from? How frequently are the source datasets updating?
+The source of dataset is sourced from IEX Cloud Legacy API.
+IEX Cloud provides real time prices, volume, and quotes for all NMS US securities
+Methods:
+GET /stock/{symbol}/intraday-prices
+Datasets are updating every minute. The data set is delayed by 15 minutes for free accounts.
+## Solution architecture
+How are we going to get data flowing from source to serving? What components and services will we combine to implement the solution? How do we automate the entire running of the solution?
+Process Flow
 ## Usage
 The pipeline will retrieve intraday stock data for the specified stock symbol, apply transformations, and load the transformed data into the PostgreSQL database.
 
@@ -113,6 +110,18 @@ Applying incremental staging on transformed data to take out columns only that i
 (path=src/etl/load.py)
 In loading the database to the pgadmin,tables need to be loaded. If tables are first time loaded then new table is inserted in the pgadmin. If new data from website comes in "Upsert" function is utilised. 
 For staging transformational loading(staging_stock) , it is sourced from newly upserted transformed table(stocks_intraday) loaded in pgadmin.
+LOAD
+Use SQLAlchemy to connect with Postgres database in AWS and upload the final datasets.
+Use Python BOTO Library to connect and upload the inital and final datasets to S3.
+Solution Architecture
+Use Github to host project code and documentation.
+Build the local project as a docker file.
+Host the project as a Docker file in ECR.
+Create private S3 Bucket to place the .env file which will store runtime variables and secrets.
+Create S3 bucket to store the inital and final datasets to S3
+Create Postgres Database in Cloud using AWS RDS Web Service.
+Create appropriate inline IAM policy that would be required by the ECS service.
+Create appropriate IAM policy for the users to run the ECS tasks.
 
 ## ETL Pipeline
 To run the pipeline in your local system, execute the following command:
@@ -160,8 +169,22 @@ Table name can be stocks_intraday, staging_stocks, pipeline_logs
 -Connect Docker file with ECS credentials ##change the credentials to Endpoint of RDS server.
 -Run the docker file on the ECS and keep logs of running.
 -For Cron scheduling, the time period of ten minutes is taken.Since,the API is updated minute to minute basis, so interval of twenty minutes is preferred.
+## Breakdown of tasks
+How is your project broken down? Who is doing what?
 
-## Links:
-https://hub.docker.com/repository/docker/ajaygupta9124/stock/general
-
-https://iexcloud.io/docs/api/#intraday-prices
+-Create Github Repository - Ajay
+-Create Draft Project Plan - Sukarno, Puja, Ajay
+-Extract - Puja
+-Transform - Perform transformations using Pandas DF APIs - Puja
+-Pipeline - Ajay
+-Load - Sukarno
+-Logging - Puja
+-Testing - Puja
+-Generating the Docker File - Sukarno, Puja, Ajay
+-Create private S3 Bucket to place the .env file - Sukarno
+-Create S3 bucket to store the inital and final datasets to S3 - Sukarno,Puja, Ajay
+-Create Postgres Database in Cloud using AWS RDS Web Service - Sukarno
+-Create appropriate inline IAM policy that would be required by the ECS service - Sukarno, Puja, Ajay
+-Create appropriate IAM policy for the users to run the ECS tasks - Sukarno, Puja, Ajay
+-ECS - Sukarno, Puja, Ajay
+-Documentation - Sukarno, Puja, Ajay
