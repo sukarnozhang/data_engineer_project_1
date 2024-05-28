@@ -1,5 +1,8 @@
 # Intraday Stock
 A ETL project that retrieves incremental intraday stock data from IEXCloud API on minute to minute basis is aimed to transformed to per day analysis data for per stock.
+
+<img width="1106" alt="Screenshot 2024-05-28 at 10 24 17" src="https://github.com/sukarnozhang/data_engineer_project_1/assets/78150905/1886cb28-8a85-4fc6-a504-84af2031aa69">
+
 ## Requirements
 - iexfinance==0.5.0
 - jupyter==1.0.0
