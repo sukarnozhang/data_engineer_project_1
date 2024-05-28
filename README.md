@@ -161,7 +161,4 @@ Table name can be stocks_intraday, staging_stocks, pipeline_logs
 -Run the docker file on the ECS and keep logs of running.
 -For Cron scheduling, the time period of ten minutes is taken.Since,the API is updated minute to minute basis, so interval of twenty minutes is preferred.
 
-## Links:
-https://hub.docker.com/repository/docker/ajaygupta9124/stock/general
 
-https://iexcloud.io/docs/api/#intraday-prices
