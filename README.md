@@ -1,5 +1,5 @@
 # Intraday Stock
-A ETL project that retrieves incremental intraday stock data from IEXCloud API on minute to minute basis is aimed to transformed to per day analysis data for per stock.
+A ETL project that retrieves incremental intraday stock data from IEXCloud API on minute basis is aimed to transformed to per day analysis data for per stock.
 
 <img width="1106" alt="Screenshot 2024-05-28 at 10 24 17" src="https://github.com/sukarnozhang/data_engineer_project_1/assets/78150905/1886cb28-8a85-4fc6-a504-84af2031aa69">
 
@@ -33,7 +33,7 @@ The pipeline will retrieve intraday stock data for the specified stock symbol, a
 
 ## Extract
 (path=src/etl/extract.py)
-Real world API's are utilised in extrcating data. The data contains per minute stock analysis from different stock code.The data can be accessed from
+Real world API's are utilised in extracting data. The data contains per minute stock analysis for different stock code.The data can be accessed from
 passing parameters as to get requests from API
 
 params = {
@@ -90,24 +90,26 @@ The following transformations are applied to the data to transformed table as st
     #Difference between open and close value across rows.
         df["difference"] = (df["close"]-df["open"])
 
-    #Creation of new dataframe to analyse the raw dataframe for per day stock vlues.
-        df1 = pd.DataFrame()
-    # max()  and min() of  OPEN , CLOSE, HIGH, LOW value on per stock  and applying LAMBDA function.
-        df1["max_open_value_per_day"] = df.groupby('stock_code').apply(lambda df: df["open"].max())
-        df1["min_open_value_per_day"] = df.groupby('stock_code').apply(lambda df: df["open"].min())
-        df1["max_close_value_per_day"] = df.groupby('stock_code').apply(lambda df: df["close"].max())
-        df1["min_close_value_per_day"] = df.groupby('stock_code').apply(lambda df: df["close"].min())
-        df1["max_high_per_day"] = df.groupby('stock_code').apply(lambda df: df["high"].max())
-        df1["min_high_per_day"] = df.groupby("stock_code").apply(lambda df: df["high"].min())
-        df1["max_low_per_day"] = df.groupby('stock_code').apply(lambda df: df["low"].max())
-        df1["min_low_per_day"] = df.groupby("stock_code").apply(lambda df: df["low"].min())
+    # Initialize summary DataFrame
+        summary_df = pd.DataFrame()
+
+    # Compute daily max/min open, close, high, low values grouped by stock_code
+        grouped = df.groupby("stock_code")
+        summary_df["max_open_value_per_day"] = grouped["open"].max()
+        summary_df["min_open_value_per_day"] = grouped["open"].min()
+        summary_df["max_close_value_per_day"] = grouped["close"].max()
+        summary_df["min_close_value_per_day"] = grouped["close"].min()
+        summary_df["max_high_per_day"] = grouped["high"].max()
+        summary_df["min_high_per_day"] = grouped["high"].min()
+        summary_df["max_low_per_day"] = grouped["low"].max()
+        summary_df["min_low_per_day"] = grouped["low"].min()
 
     # Difference sum for per stock
-        df1["status_difference"] = df.groupby("stock_code").apply(lambda df: df["difference"].sum())
+        summary_df["status_difference"] = grouped["difference"].sum()
 
     #mean() value for trades and volume on per stock by grouby() function and lambda mapping.
-        df1["trades_mean"] = df.groupby("stock_code").apply(lambda df: df["numberoftrades"].mean())
-        df1["volume_mean"] = df.groupby("stock_code").apply(lambda df: df["volume"].mean())
+        summary_df["trades_mean"] = grouped["numberOfTrades"].mean()
+        summary_df["volume_mean"] = grouped["volume"].mean()
 
 ## Incremental Staging on transformations
 Applying incremental staging on transformed data to take out columns only that is required in everyday trading by taking four important columns from "stocks_intraday"(transformed in prior step) through jinja file path as "src\models\transform\stocks_intraday.sql". Applying pivot point as max value operation "volume_mean".
