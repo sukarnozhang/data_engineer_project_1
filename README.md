@@ -24,7 +24,6 @@ pip install -r requirements.txt
 - config_stock_code.yaml - Contains the list of Stock symbols to fetch the intraday stocks data
 - config.bat - Configure this file with iex_api_key, db_user, db_password, db_server_name, db_database_name if you want to run the project locally in Windows
 - config.sh - Configure this file with iex_api_key, db_user, db_password, db_server_name, db_database_name if you want to run the project locally in Linux/Mac
-- config.yaml - Contains log table name
 - .env file - This file is required to build and run the docker image on Cloud
 
 ## Usage

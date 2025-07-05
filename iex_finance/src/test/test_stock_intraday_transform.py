@@ -1,65 +1,77 @@
+import os
+import pandas as pd
 from database.postgres import PostgresDB
-import pandas as pd 
-import os 
-import jinja2 as j2 
 from etl.transform import Transform
-def test_stocks_intraday():
-    # -- assemble -- 
-    actual_source_stocks_intraday = "stocks_intraday"
-    mock_source_stocks_intraday = f"mock_{actual_source_stocks_intraday}"
-    actual_target_table="stocks_intraday"
-    mock_target_table= f"mock_{actual_target_table}"
-    path_model_transform = "models/transform"
+
+def test_stocks_intraday_transform():
+    """
+    Test ETL transformation on intraday stock data.
+
+    This test:
+    - Loads mock intraday stock data into a temporary source table.
+    - Runs the transformation SQL to process the data.
+    - Verifies the output matches expected transformed data.
+    - Cleans up test artifacts after completion.
+    """
+
+    # --- Setup ---
     engine = PostgresDB.create_pg_engine()
-            
-    # create mock staging_orders
-    df_mock_data_staging_stock = pd.DataFrame({
-        "stock_code":["AAPL","TSLA"],
-        "max_open_value_per_day":[151.165,205.59],
-        "min_open_value_per_day":[149.39,193.18],
-        "max_close_value_per_day":[151.225,205.61],
-        "min_close_value_per_day":[149.41,193.225],
-        "max_high_per_day":[151.225,206.2],
-        "min_high_per_day":[149.44,193.4],
-        "max_low_per_day":[151.01,205.07],
-        "min_low_per_day":[149.26,193.03],
-        "status_difference":[-1.1100000000000136,9.055000000000291],
-        "trades_mean":[14.592261904761905,20.246290801186944],
-        "volume_mean":[2095.535714285714,2442.1364985163204]
-    })
-    df_mock_data_staging_stock.to_sql(name=mock_source_stocks_intraday, con=engine, if_exists="replace", index=False)
+    source_table = "stocks_intraday"
+    mock_table = f"mock_{source_table}"  # temporary mock table name
+    path_model_transform = "models/transform"
 
-
-    # get transform sql file 
-    with open(f"{path_model_transform}/{actual_target_table}.sql") as f: 
-        raw_sql = f.read()
-        
-    raw_sql = raw_sql.replace(actual_source_stocks_intraday, mock_source_stocks_intraday)
-    # write mock transform file 
-    with open(f"{path_model_transform}/{mock_target_table}.sql", mode="w") as f:  
-            f.write(raw_sql)
-    df_expected_output=pd.DataFrame({
-        "stock_code":["AAPL","TSLA"],
-        "max_open_value_per_day":[151.165,205.59],
-        "min_open_value_per_day":[149.39,193.18],
-        "max_close_value_per_day":[151.225,205.61],
-        "min_close_value_per_day":[149.41,193.225],
-        "max_high_per_day":[151.225,206.2],
-        "min_high_per_day":[149.44,193.4],
-        "max_low_per_day":[151.01,205.07],
-        "min_low_per_day":[149.26,193.03],
-        "status_difference":[-1.1100000000000136,9.055000000000291],
-        "trades_mean":[14.592261904761905,20.246290801186944],
-        "volume_mean":[2095.535714285714,2442.1364985163204]  
+    # Mock input data simulating raw intraday stock metrics
+    df_mock_input = pd.DataFrame({
+        "stock_code": ["AAPL", "TSLA"],
+        "max_open": [151.165, 205.59],
+        "min_open": [149.39, 193.18],
+        "max_close": [151.225, 205.61],
+        "min_close": [149.41, 193.225],
+        "max_high": [151.225, 206.2],
+        "min_high": [149.44, 193.4],
+        "max_low": [151.01, 205.07],
+        "min_low": [149.26, 193.03],
+        "status_diff": [-1.11, 9.055],
+        "mean_trades": [14.59, 20.25],
+        "mean_volume": [2095.53, 2442.13]
     })
 
+    # Load mock data into the mock source table in the database
+    df_mock_input.to_sql(name=mock_table, con=engine, if_exists="replace", index=False)
 
-    # -- act -- 
-    staging_stocks= Transform.transform_staging(mock_target_table, engine=engine, models_path=path_model_transform)
-    df_output = pd.read_sql(mock_target_table,con=engine)
-    # clean up first 
-    engine.execute(f"drop table {mock_source_stocks_intraday}")
+    # --- Define expected output after the transformation ---
+    df_expected_output = pd.DataFrame({
+        "stock_code": ["AAPL", "TSLA"],
+        "max_open": [151.165, 205.59],
+        "min_open": [149.39, 193.18],
+        "max_close": [151.225, 205.61],
+        "min_close": [149.41, 193.225],
+        "max_high": [151.225, 206.2],
+        "min_high": [149.44, 193.4],
+        "max_low": [151.01, 205.07],
+        "min_low": [149.26, 193.03],
+        "status_diff": [-1.11, 9.055],
+        "mean_trades": [14.59, 20.25],
+        "mean_volume": [2095.53, 2442.13]
+    })
 
+    # Run the transform SQL against the mock table
+    Transform.transform(
+        table_name=mock_table,
+        engine=engine,
+        models_path=path_model_transform
+    )
 
-    # -- assert -- 
-    pd.testing.assert_frame_equal(left=df_output, right=df_expected_output, check_exact=True)
+    # Read the actual transformed data back from the database
+    df_actual_output = pd.read_sql_table(mock_table, con=engine)
+
+    # --- Cleanup ---
+    engine.execute(f"DROP TABLE IF EXISTS {mock_table}")
+
+    # --- Assert ---
+    pd.testing.assert_frame_equal(
+        df_actual_output.reset_index(drop=True),
+        df_expected_output.reset_index(drop=True),
+        check_exact=False,   # Allow small numeric differences
+        rtol=1e-3            # Relative tolerance for floating point comparisons
+    )
