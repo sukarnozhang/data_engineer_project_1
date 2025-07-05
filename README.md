@@ -1,5 +1,5 @@
 # Intraday Stock
-A ETL project that retrieves incremental intraday stock data from IEXCloud API on minute basis is aimed to transformed to per day analysis data for per stock.
+A ETL project that retrieves incremental intraday stock data from IEXCloud API on minute basis, aimed to transform it into per day analysis data for per stock.
 
 <img width="1106" alt="Screenshot 2024-05-28 at 10 24 17" src="https://github.com/sukarnozhang/data_engineer_project_1/assets/78150905/1886cb28-8a85-4fc6-a504-84af2031aa69">
 
@@ -21,17 +21,19 @@ A ETL project that retrieves incremental intraday stock data from IEXCloud API o
 pip install -r requirements.txt
 ```
 ## Configuration
-- config_stock_code.yaml - Contains the list of Stock symbols to fetch the intraday stocks data
+- config_stock_code.yaml - Contains the list of stock symbols to fetch the intraday stocks data
+
 - config.bat - Configure this file with iex_api_key, db_user, db_password, db_server_name, db_database_name if you want to run the project locally in Windows
+
 - config.sh - Configure this file with iex_api_key, db_user, db_password, db_server_name, db_database_name if you want to run the project locally in Linux/Mac
+
 - .env file - This file is required to build and run the docker image on Cloud
 
 ## Usage
 The pipeline will retrieve intraday stock data for the specified stock symbol, apply transformations, and load the transformed data into the PostgreSQL database.
 
 ## Extract
-Real world API's are utilised in extracting data. The data contains per minute stock analysis for different stock code.The data can be accessed from
-passing parameters as to get requests from API
+Real world APIs are utilised in extracting data. The data contains per minute stock analysis for different stock codes. The data can be accessed from passing parameters as to get requests from API
 
 params = {
             "token" : iex_api_key
@@ -40,45 +42,50 @@ where, iex_api_key is the secret key.
 
 base_url = f"https://cloud.iexapis.com/stable/stock/{stock_ticker}/intraday-prices"
 
-In the base url, stock ticker is taken config_stock_code.yaml file , which is user configurable.Stock code can changed according to user's preferences.
+where iex_api_key is the secret key.
+
+In the base url, stock ticker is taken from config_stock_code.yaml file, which is user configurable. Stock code can be changed according to user's preferences.
 
 The extraction part takes out table with columns as json file:
-    x = {
-        "date": "2023-12-15",
-        "minute": "2023-12-15 09:30AM",
-        "label": "09:30 AM",
-        "marketOpen": 143.98,
-        "marketClose": 143.775,
-        "marketHigh": 143.98,
-        "marketLow": 143.775,
-        "marketAverage": 143.889,
-        "marketVolume": 3070,
-        "marketNotional": 441740.275,
-        "marketNumberOfTrades": 20,
-        "marketChangeOverTime": -0.004,
-        "high": 143.98,
-        "low": 143.775,
-        "open": 143.98,
-        "close": 143.775,
-        "average": 143.889,
-        "volume": 3070,
-        "notional": 441740.275,
-        "numberOfTrades": 20,
-        "changeOverTime": -0.0039,
-    }
 
-The above "x" doesn't contains stock_code, so in the final extrcated data "stock_code" for each "x" is appended.So,the each row contains columns "stock_code" as extra element.
+json
+Copy
+Edit
+x = {  
+        "date": "2023-12-15",  
+        "minute": "2023-12-15 09:30AM",  
+        "label": "09:30 AM",  
+        "marketOpen": 143.98,  
+        "marketClose": 143.775,  
+        "marketHigh": 143.98,  
+        "marketLow": 143.775,  
+        "marketAverage": 143.889,  
+        "marketVolume": 3070,  
+        "marketNotional": 441740.275,  
+        "marketNumberOfTrades": 20,  
+        "marketChangeOverTime": -0.004,  
+        "high": 143.98,  
+        "low": 143.775,  
+        "open": 143.98,  
+        "close": 143.775,  
+        "average": 143.889,  
+        "volume": 3070,  
+        "notional": 441740.275,  
+        "numberOfTrades": 20,  
+        "changeOverTime": -0.0039  
+    }
+The above "x" doesn't contain stock_code, so in the final extracted data "stock_code" for each "x" is appended. So, each row contains column "stock_code" as extra element.
+
 
 ## Transformations
-Transformations are made in aim to convert per minute data to per day data for per stock.
-  
+Transformations are made with the aim to convert per minute data to per day data for per stock.
+
 Sample Output of the transformation :
 <img width="1106" src="https://github.com/sukarnozhang/data_engineer_project_1/blob/main/iex_finance/src/data/sample_output.png">
 
 ## Load
-(path=src/etl/load.py)
-In loading the database to the pgadmin,tables need to be loaded. If tables are first time loaded then new table is inserted in the pgadmin. If new data from website comes in "Upsert" function is utilised. 
-For staging transformational loading(staging_stock) , it is sourced from newly upserted transformed table(stocks_intraday) loaded in pgadmin.
+In loading the database to the pgadmin, tables need to be loaded. If tables are first time loaded then new table is inserted in the pgadmin. If new data from website comes in, "Upsert" function is utilised.
+For staging transformational loading (staging_stock), it is sourced from newly upserted transformed table (stocks_intraday) loaded in pgadmin.
 
 ## ETL Pipeline
 To run the pipeline in your local system, execute the following command:
@@ -89,8 +96,8 @@ export PYTHONPATH=`pwd` # for windows: set PYTHONPATH=%cd%
 
 python etl/pipeline/pipeline.py
 ```
-ETL pipeline is executed from metadata logging initialisation and logging.info for keeping the history as coded in utility folder as "metadata_logging.py" and ectracting the log through initialising the "log_table: "pipeline_logs" on config.yaml file.
-Extract, Transform and Load are performed to get final loaded on pgadmin as "stocks_intraday" , "staging_stocks" and "pipeline_logs".
+ETL pipeline is executed from metadata logging initialisation and logging.info for keeping the history as coded in utility folder as "metadata_logging.py" and extracting the log through initialising the log_table: "pipeline_logs" on config.yaml file.
+Extract, Transform and Load are performed to get final loaded on pgadmin as "stocks_intraday", "staging_stocks" and "pipeline_logs".
 
 ## Testing
 (jinja file path="src\models\transform"),(test file path = "src\test\transform")
