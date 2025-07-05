@@ -110,8 +110,8 @@ The following transformations are applied to the data to transformed table as st
         summary_df["trades_mean"] = grouped["numberOfTrades"].mean()
         summary_df["volume_mean"] = grouped["volume"].mean()
 
-## Incremental Staging on transformations
-Applying incremental staging on transformed data to take out columns only that is required in everyday trading by taking four important columns from "stocks_intraday"(transformed in prior step) through jinja file path as "src\models\transform\staging_stock.sql". Applying pivot point as max value operation "volume_mean".
+Sample Output of the transformation :
+
 
 ## Load
 (path=src/etl/load.py)
