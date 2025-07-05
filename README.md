@@ -73,7 +73,7 @@ The above "x" doesn't contains stock_code, so in the final extrcated data "stock
 Transformations are made in aim to convert per minute data to per day data for per stock.
   
 Sample Output of the transformation :
-<img width="1106" src="/Users/sukarno/Desktop/z_interview_pack/data_engineer_project_1/iex_finance/src/data/sample_output.png">
+<img width="1106" src="https://github.com/sukarnozhang/data_engineer_project_1/blob/main/iex_finance/src/data/sample_output.png">
 
 ## Load
 (path=src/etl/load.py)
