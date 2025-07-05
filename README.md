@@ -71,7 +71,7 @@ The extraction part takes out table with columns as json file:
 The above "x" doesn't contains stock_code, so in the final extrcated data "stock_code" for each "x" is appended.So,the each row contains columns "stock_code" as extra element.
 
 ## Transformations
-(path = src/etl/transform.py)<br>
+(path = src/etl/transform.py)<br><br>
 Transformations are made in aim to convert per minute data to per day data for per stock.
 The following transformations are applied to the data to transformed table as stocks_intraday:
     #Renaming
