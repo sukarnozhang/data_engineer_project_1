@@ -1,33 +1,45 @@
-from sqlalchemy import create_engine, Table, Column, Integer, String, MetaData, Float # https://www.tutorialspoint.com/sqlalchemy/sqlalchemy_core_creating_table.htm
-from sqlalchemy.engine import URL
-from sqlalchemy.dialects import postgresql
-from sqlalchemy.schema import CreateTable 
+from sqlalchemy import create_engine  # Used to create the SQLAlchemy engine (DB connection)
+from sqlalchemy.engine import URL     # Helps build the DB connection URL in a safe way
 import os 
 
-class PostgresDB():
-    
+class PostgresDB:
+    # Static method: no need to instantiate the class to use this method
     @staticmethod
-    def create_pg_engine():
+    def get_postgres_engine_from_env() -> "sqlalchemy.Engine":
         """
-        Method to create DB engine using following envt variables: 
-        db_user
-        db_password
-        db_server_name
-        db_database_name 
-        """ 
-        db_user = os.environ.get("db_user")
-        db_password = os.environ.get("db_password")
-        db_server_name = os.environ.get("db_server_name")
-        db_database_name = os.environ.get("db_database_name")
+        Creates and returns a SQLAlchemy engine for a PostgreSQL database
+        using credentials stored in environment variables.
 
-        # create connection to database 
+        Expected environment variables:
+        - db_user: Database username
+        - db_password: Database password
+        - db_server_name: Database server/host address (e.g., AWS RDS endpoint)
+        - db_database_name: Target database name
+
+        Raises:
+            EnvironmentError: If any required environment variable is missing.
+        
+        Returns:
+            sqlalchemy.Engine: A ready-to-use SQLAlchemy engine for connecting to the DB.
+        """
+
+        # List of required environment variables
+        required_vars = ["db_user", "db_password", "db_server_name", "db_database_name"]
+
+        # Identify any missing variables
+        missing = [var for var in required_vars if not os.environ.get(var)]
+        if missing:
+            raise EnvironmentError(f"Missing environment variables: {', '.join(missing)}")
+
+        # Build the connection URL
         connection_url = URL.create(
-            drivername = "postgresql+pg8000", 
-            username = db_user,
-            password = db_password,
-            host = db_server_name, 
-            port = 5432,
-            database = db_database_name, 
+            drivername="postgresql+pg8000",  
+            username=os.environ["db_user"],
+            password=os.environ["db_password"],
+            host=os.environ["db_server_name"],  # AWS RDS endpoint, loaded from env
+            port=5432,  
+            database=os.environ["db_database_name"],
         )
-        engine = create_engine(connection_url)
-        return engine 
+
+        # Create and return the SQLAlchemy engine using the connection URL
+        return create_engine(connection_url)
