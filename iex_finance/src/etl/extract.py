@@ -55,7 +55,7 @@ class Extract:
 
         # Load the list of stock codes from the YAML config file
         with open("config_stock_code.yaml") as file:
-            config = yaml.safe_load(file)
+            config = yaml.safe_load(file) # to avoid executing script within yaml
 
         # Get stock codes list; fallback to empty list if missing
         stock_codes = config.get("stock_code", [])

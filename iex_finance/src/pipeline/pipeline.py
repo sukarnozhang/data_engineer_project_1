@@ -62,21 +62,19 @@ def pipeline() -> bool:
     logging.info("Commencing database load")
     Load.load(
         df=df_transformed,
-        load_target="database",
         target_database_engine=engine,
         target_table_name="stocks_intraday"
     )
     logging.info("Database load complete")
 
-    # Transform phase: SQL (incremental)
-    logging.info("Commencing SQL transform (incremental daily aggregation)")
-    Transform.transform_sql(
-        model="daily_stock_agg",  # Adjust to your actual SQL template name
+    # Weekly stock aggregation
+    Transform.weekly_stocl_agg(
+        model="weekly_stock_agg",  # points to weekly_stock_agg.sql
         engine=engine,
-        models_path="./models",   # Adjust path to your SQL model templates
-        target_table="stocks_daily"
+        models_path="./models/transform",
+        target_table="stocks_weekly"
     )
-    logging.info("SQL transform complete")
+    logging.info("Weekly stock aggregation complete")
 
     # Log successful completion
     logging.info("Pipeline run successful")

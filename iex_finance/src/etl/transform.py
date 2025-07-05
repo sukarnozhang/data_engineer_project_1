@@ -9,7 +9,7 @@ class Transform:
         """
         Transform using Pandas (in-memory)
         """
-        df['date'] = pd.to_datetime(df['datetime']).dt.date
+        df['date'] = pd.to_datetime(df['minute']).dt.date
 
         daily_df = (
             df.groupby(['stock_code', 'date']).agg(
@@ -29,7 +29,7 @@ class Transform:
         return daily_df
 
     @staticmethod
-    def transform_sql(model: str, engine, models_path: str, target_table: str) -> bool:
+    def weekly_stock_agg(model: str, engine, models_path: str, target_table: str) -> bool:
         """
         Transform using SQL (Jinja + SQL execution)
         """
