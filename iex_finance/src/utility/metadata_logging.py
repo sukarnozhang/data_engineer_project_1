@@ -1,74 +1,54 @@
 from database.postgres import PostgresDB
-import datetime as dt 
-from sqlalchemy import Table, Column, Integer, String, MetaData, Float, JSON
-from sqlalchemy import insert, select, func
+from sqlalchemy import Table, Column, Integer, String, MetaData
+from sqlalchemy import select, func
 
-class MetadataLogging():
+class MetadataLogging:
+    """
+    Utility class for handling ETL metadata logging into a Postgres database.
+    Provides methods to create a log table if missing, and to fetch the next run ID.
+    """
 
-    def __init__(self, db_target):
-        self.engine = PostgresDB.create_pg_engine()
-    
-    def create_target_table_if_not_exists(self, db_table:str)->Table:
+    def __init__(self):
         """
-        Method to create Database table 
-        Input Parameters:
-        db_table - Database table name
-        """ 
+        Initialize with a Postgres database engine.
+        """
+        self.engine = PostgresDB.create_pg_engine()
+
+    def create_target_table_if_not_exists(self, db_table: str) -> Table:
+        """
+        Creates the target metadata log table in the database if it does not exist.
+
+        Args:
+            db_table (str): Name of the log table.
+
+        Returns:
+            sqlalchemy.Table: SQLAlchemy table object linked to the table.
+        """
         meta = MetaData()
         target_table = Table(
-            db_table, meta, 
-            Column("run_timestamp", String, primary_key=True),
-            Column("run_id", Integer, primary_key=True),
-            Column("run_status", String, primary_key=True),
-            Column("run_config", JSON),
-            Column("run_log", String)
+            db_table, meta,
+            Column("run_timestamp", String, primary_key=True),  # Timestamp of the run
+            Column("run_id", Integer, primary_key=True),        # Run ID (sequential integer)
+            Column("run_status", String, primary_key=True),     # Run status (e.g. started, completed, failed)
+            Column("run_log", String)                           # Optional: Captured log output
         )
-        meta.create_all(self.engine) # creates table if it does not exist
-        return target_table 
-    
-    def get_latest_run_id(self, db_table:str)->int:
-        """
-        Method to get the latest run ID from Database table 
-        Input Parameters:
-        db_table - Database table name
-        """ 
-        target_table = self.create_target_table_if_not_exists(db_table=db_table)
-        statement = (
-            select(func.max(target_table.c.run_id))
-        )
-        response = self.engine.execute(statement).first()[0]
-        if response is None: 
-            return 1 
-        else: 
-            return response + 1 
+        meta.create_all(self.engine)  # Creates the table if it doesn't exist (no-op if it does)
+        return target_table
 
-    def log(
-        self,
-        run_timestamp: dt.datetime,
-        run_id: int,
-        run_config: dict,
-        db_table: str,
-        run_status: str="started",
-        run_log:str="",
-    )->bool:
+    def get_latest_run_id(self, db_table: str) -> int:
         """
-        Method to inset logs into database 
-        Input Parameters:
-        run_timestamp
-        run_id
-        run_config
-        db_table
-        run_status
-        run_log
-        """ 
-        target_table = self.create_target_table_if_not_exists(db_table=db_table)
-        insert_statement = insert(target_table).values(
-            run_timestamp=run_timestamp,
-            run_id=run_id,
-            run_status=run_status,
-            run_config=run_config,
-            run_log=run_log
-        )
-        self.engine.execute(insert_statement)
+        Gets the next run_id (max existing + 1, or 1 if no runs exist).
 
-        return True 
+        Args:
+            db_table (str): Name of the log table.
+
+        Returns:
+            int: The next run_id to use.
+        """
+        target_table = self.create_target_table_if_not_exists(db_table=db_table)
+
+        # Query max run_id
+        statement = select(func.max(target_table.c.run_id))
+        result = self.engine.execute(statement).first()[0]
+
+        return 1 if result is None else result + 1
