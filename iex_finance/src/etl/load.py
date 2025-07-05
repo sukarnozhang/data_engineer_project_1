@@ -1,68 +1,56 @@
-from sqlalchemy import Integer, String, Float, JSON , DateTime, Boolean, BigInteger, Numeric
-from sqlalchemy import Table, Column, Integer, String, MetaData, Float, JSON 
-import jinja2 as j2
-import pandas as pd
-import numpy as np
-import logging
-import os
+from sqlalchemy import Table, Column, String, Float, Date
 from sqlalchemy.dialects import postgresql
-class Load():
-    
+import pandas as pd
+import os
+import logging
+
+class Load:
     @staticmethod
     def load(
-        df:pd.DataFrame,
-        load_target:str, 
-        load_method:str="overwrite",
-        target_file_directory:str=None,
-        target_file_name:str=None,
-        target_database_engine=None,
-        target_table_name:str=None
-        )->None:
+        df: pd.DataFrame,
+        target_database_engine = None,
+        target_table_name: str = None
+    ) -> None:
         """
-        Load dataframe to either a file or a database.
-        Input Parameters:
-        - df: pandas dataframe to load.  
-        - load_target: choose either `file` or `database`.
+        Load DataFrame to a Postgres database table using upsert (insert or update).
+
+        Parameters:
+        - df: pandas DataFrame containing the data to load
+        - target_database_engine: SQLAlchemy engine connected to the target database
+        - target_table_name: name of the target database table to load data into
         """
 
-        if load_target.lower() == "file": 
-            if load_method.lower() == "overwrite": 
-                df.to_parquet(f"{target_file_directory}/{target_file_name}")
-            elif load_method.lower() == "upsert": 
-                if target_file_name in os.listdir(f"{target_file_directory}/"): 
-                    df_current = pd.read_parquet(f"{target_file_directory}/{target_file_name}")
-                    df_concat = pd.concat(objs=[df_current,df[~df.index.isin(df_current.index)]]) # ~: converts true to false, and false to true. 
-                else:
-                    pass
+        # Define the database table schema mapping
+        # This creates an in-memory Table object to assist with SQL generation
+        stock_price_table = Table(
+            target_table_name,
+            Column("stock_code", String, primary_key=True),  # Stock ticker symbol, part of composite PK
+            Column("date", Date, primary_key=True),          # Trading date, part of composite PK for uniqueness per day
+            Column("min_open", Float),                       # Minimum open price for the day
+            Column("max_close", Float),                       # Maximum close price for the day
+            Column("daily_high", Float),                      # Highest price during the day
+            Column("daily_low", Float),                     # Lowest price during the day
+            Column("daily_volume", Float),                    # Total volume traded that day
+            Column("daily_trades", Float),                    # Total number of trades executed that day
+            Column("daily_return", Float)                     # Net price change (max close - min open)
+        )
 
-        elif load_target.lower() == "database": 
-            from sqlalchemy import Table, Column, Integer, String, MetaData, Float
-            from sqlalchemy.dialects import postgresql
-            if load_method.lower() == "overwrite": 
-                df.to_sql(target_table_name, target_database_engine)
-            elif load_method.lower() == "upsert":
-                stock_price_table = Table(
-                target_table_name, meta, 
-                Column("stock_code", String, primary_key=True),
-                Column("max_open_value_per_day", Float),
-                Column("min_open_value_per_day", Float),
-                Column("max_close_value_per_day", Float),
-                Column("min_close_value_per_day", Float),
-                Column("max_high_per_day", Float),
-                Column("min_high_per_day", Float),
-                Column("max_low_per_day", Float),
-                Column("min_low_per_day", Float),
-                Column("status_difference", Float),
-                Column("trades_mean", Float),
-                Column("volume_mean", Float),
-            )
+        # Prepare an INSERT statement using PostgreSQL dialect's insert()
+        # The data is converted from the DataFrame to a list of dict records
+        insert_stmt = postgresql.insert(stock_price_table).values(df.to_dict(orient='records'))
 
-                meta.create_all(target_database_engine) # creates table if it does not exist 
-                insert_statement = postgresql.insert(stock_price_table).values(df.to_dict(orient='records'))
-                upsert_statement = insert_statement.on_conflict_do_update(
-                    index_elements=['stock_code'],
-                    set_={c.key: c for c in insert_statement.excluded if c.key not in ['stock_code']})
-                target_database_engine.execute(upsert_statement)
-        
-        else: 
-            raise Exception("Wrong usage of the function. The current config results in no action being performed.")
+        # Create an UPSERT statement: on conflict of primary keys ("stock_code", "date")
+        # Update all columns except the primary key columns to keep data fresh
+        upsert_stmt = insert_stmt.on_conflict_do_update(
+            index_elements=["stock_code", "date"],           # Columns defining the conflict (PK)
+            set_={col: insert_stmt.excluded[col]              # Set columns to new values from insert, excluding PKs
+                  for col in df.columns if col not in ['stock_code', 'date']}
+        )
+
+        # Execute the upsert statement using the provided SQLAlchemy engine
+        target_database_engine.execute(upsert_stmt)
+
+        # Log a success message
+        logging.info(f"Table {target_table_name} upserted.")
+
+
