@@ -30,7 +30,6 @@ pip install -r requirements.txt
 The pipeline will retrieve intraday stock data for the specified stock symbol, apply transformations, and load the transformed data into the PostgreSQL database.
 
 ## Extract
-(path=src/etl/extract.py)
 Real world API's are utilised in extracting data. The data contains per minute stock analysis for different stock code.The data can be accessed from
 passing parameters as to get requests from API
 
@@ -71,46 +70,10 @@ The extraction part takes out table with columns as json file:
 The above "x" doesn't contains stock_code, so in the final extrcated data "stock_code" for each "x" is appended.So,the each row contains columns "stock_code" as extra element.
 
 ## Transformations
-(path = src/etl/transform.py)<br><br>
 Transformations are made in aim to convert per minute data to per day data for per stock.
-The following transformations are applied to the data to transformed table as stocks_intraday:
-    #Renaming
-        df = df.rename(columns={
-            "numberOfTrades": "numberoftrades"
-            })
-
-    #Adding column datetime that includes date and time both. Conversion of minutes into 24-hours format.
-        df["datetime"] = pd.to_datetime(df["minute"])
-
-    #Droping columns "date", "minutes" and labels, added datetime in prior step.
-        df = df.drop(df.columns[[0,1,2]],axis=1)
-
-    #Difference between open and close value across rows.
-        df["difference"] = (df["close"]-df["open"])
-
-    # Initialize summary DataFrame
-        summary_df = pd.DataFrame()
-
-    # Compute daily max/min open, close, high, low values grouped by stock_code
-        grouped = df.groupby("stock_code")
-        summary_df["max_open_value_per_day"] = grouped["open"].max()
-        summary_df["min_open_value_per_day"] = grouped["open"].min()
-        summary_df["max_close_value_per_day"] = grouped["close"].max()
-        summary_df["min_close_value_per_day"] = grouped["close"].min()
-        summary_df["max_high_per_day"] = grouped["high"].max()
-        summary_df["min_high_per_day"] = grouped["high"].min()
-        summary_df["max_low_per_day"] = grouped["low"].max()
-        summary_df["min_low_per_day"] = grouped["low"].min()
-
-    # Difference sum for per stock
-        summary_df["status_difference"] = grouped["difference"].sum()
-
-    #mean() value for trades and volume on per stock by grouby() function and lambda mapping.
-        summary_df["trades_mean"] = grouped["numberOfTrades"].mean()
-        summary_df["volume_mean"] = grouped["volume"].mean()
-
+  
 Sample Output of the transformation :
-
+<img width="1106" src="/Users/sukarno/Desktop/z_interview_pack/data_engineer_project_1/iex_finance/src/data/sample_output.png">
 
 ## Load
 (path=src/etl/load.py)
