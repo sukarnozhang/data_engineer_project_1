@@ -4,7 +4,6 @@ A ETL project that retrieves incremental intraday stock data from IEXCloud API o
 <img width="1106" alt="Screenshot 2024-05-28 at 10 24 17" src="https://github.com/sukarnozhang/data_engineer_project_1/assets/78150905/1886cb28-8a85-4fc6-a504-84af2031aa69">
 
 ## Requirements
-- iexfinance==0.5.0
 - jupyter==1.0.0
 - pandas==1.4.3
 - requests==2.28.1
@@ -47,8 +46,8 @@ In the base url, stock ticker is taken config_stock_code.yaml file , which is us
 
 The extraction part takes out table with columns as json file:
     x = {
-        "date": "2017-12-15",
-        "minute": "09:30",
+        "date": "2023-12-15",
+        "minute": "2023-12-15 09:30AM",
         "label": "09:30 AM",
         "marketOpen": 143.98,
         "marketClose": 143.775,
