@@ -48,9 +48,7 @@ In the base url, stock ticker is taken from config_stock_code.yaml file, which i
 
 The extraction part takes out table with columns as json file:
 
-json
-Copy
-Edit
+```json
 x = {  
         "date": "2023-12-15",  
         "minute": "2023-12-15 09:30AM",  
@@ -74,6 +72,8 @@ x = {
         "numberOfTrades": 20,  
         "changeOverTime": -0.0039  
     }
+```
+
 The above "x" doesn't contain stock_code, so in the final extracted data "stock_code" for each "x" is appended. So, each row contains column "stock_code" as extra element.
 
 
@@ -85,7 +85,7 @@ Sample Output of the transformation :
 
 ## Load
 In loading the database to the pgadmin, tables need to be loaded. If tables are first time loaded then new table is inserted in the pgadmin. If new data from website comes in, "Upsert" function is utilised.
-For staging transformational loading (staging_stock), it is sourced from newly upserted transformed table (stocks_intraday) loaded in pgadmin.
+
 
 ## ETL Pipeline
 To run the pipeline in your local system, execute the following command:
@@ -96,12 +96,11 @@ export PYTHONPATH=`pwd` # for windows: set PYTHONPATH=%cd%
 
 python etl/pipeline/pipeline.py
 ```
-ETL pipeline is executed from metadata logging initialisation and logging.info for keeping the history as coded in utility folder as "metadata_logging.py" and extracting the log through initialising the log_table: "pipeline_logs" on config.yaml file.
-Extract, Transform and Load are performed to get final loaded on pgadmin as "stocks_intraday", "staging_stocks" and "pipeline_logs".
+The ETL pipeline begins with metadata logging initialization using logging.info to track history, as implemented in the utility file metadata_logging.py. Logs are recorded in the table specified by log_table: pipeline_logs.
+
 
 ## Testing
-(jinja file path="src\models\transform"),(test file path = "src\test\transform")
-Two unit testings are applied on the transformational datas on table stocks_intraday and staging_stock through pytest command after running the pipeline.jinja file to structure the mock table.
+One unit testing are applied on the transformational datas on table stocks_intraday and staging_stock through pytest command after running the pipeline.jinja file to structure the mock table.
 ## Docker file
 (path="\iex_finance\Dockerfile")
 (env file path = "\iex_finance\.env")

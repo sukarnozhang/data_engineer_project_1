@@ -15,7 +15,7 @@ def pipeline() -> bool:
     Logs progress and metadata about the run.
 
     Returns:
-        bool: True if pipeline completes successfully, False if failed.
+        bool: True if pipeline completes successfully, False otherwise.
     """
 
     # Set up in-memory log capture
@@ -41,57 +41,54 @@ def pipeline() -> bool:
         db_table=metadata_log_table
     )
 
-    try:
-        # Read API key for extraction (stored in S3, grant access to ECS)
-        iex_api_key = os.environ.get("iex_api_key")
-        if not iex_api_key:
-            logging.error("Missing IEX API key in environment variables.")
-            raise EnvironmentError("IEX API key is required but not set.")
+    # Read API key for extraction (stored in S3, grant access to ECS)
+    iex_api_key = os.environ.get("iex_api_key")
+    if not iex_api_key:
+        logging.error("Missing IEX API key in environment variables.")
+        raise EnvironmentError("IEX API key is required but not set.")
 
-        # Extract phase
-        logging.info("Commencing extract")
-        df = Extract.extract_stocks(iex_api_key)
-        logging.info("Extract complete")
+    # Extract phase (daily data)
+    logging.info("Commencing extract")
+    df = Extract.extract_stocks(iex_api_key)
+    logging.info("Extract complete")
 
-        # Transform phase
-        logging.info("Commencing transform")
-        df_transformed = Transform.transform(df)
-        logging.info("Transform complete")
+    # Transform phase: Pandas
+    logging.info("Commencing Pandas transform")
+    df_transformed = Transform.transform_pandas(df)
+    logging.info("Pandas transform complete")
 
-        # Load phase
-        engine = PostgresDB.create_pg_engine()
-        logging.info("Commencing database load")
-        Load.load(
-            df=df_transformed,
-            load_target="database",
-            target_database_engine=engine,
-            target_table_name="stocks_intraday"
-        )
-        logging.info("Database load complete")
+    # Load phase
+    engine = PostgresDB.create_pg_engine()
+    logging.info("Commencing database load")
+    Load.load(
+        df=df_transformed,
+        load_target="database",
+        target_database_engine=engine,
+        target_table_name="stocks_intraday"
+    )
+    logging.info("Database load complete")
 
-        # Log successful completion
-        logging.info("Pipeline run successful")
-        metadata_logger.log(
-            run_timestamp=dt.datetime.now(),
-            run_status="completed",
-            run_id=metadata_log_run_id,
-            run_log=run_log.getvalue(),
-            db_table=metadata_log_table
-        )
+    # Transform phase: SQL (incremental)
+    logging.info("Commencing SQL transform (incremental daily aggregation)")
+    Transform.transform_sql(
+        model="daily_stock_agg",  # Adjust to your actual SQL template name
+        engine=engine,
+        models_path="./models",   # Adjust path to your SQL model templates
+        target_table="stocks_daily"
+    )
+    logging.info("SQL transform complete")
 
-        return True
+    # Log successful completion
+    logging.info("Pipeline run successful")
+    metadata_logger.log(
+        run_timestamp=dt.datetime.now(),
+        run_status="completed",
+        run_id=metadata_log_run_id,
+        run_log=run_log.getvalue(),
+        db_table=metadata_log_table
+    )
 
-    except Exception as e:
-        # Log failure with details
-        logging.exception("Pipeline failed")
-        metadata_logger.log(
-            run_timestamp=dt.datetime.now(),
-            run_status="failed",
-            run_id=metadata_log_run_id,
-            run_log=run_log.getvalue(),
-            db_table=metadata_log_table
-        )
-        return False
+    return True
 
 if __name__ == "__main__":
     pipeline()

@@ -5,18 +5,33 @@ import jinja2 as j2
 
 class Transform:
     @staticmethod
-    def transform(model: str, engine, models_path: str, target_table: str) -> bool:
+    def transform_pandas(df: pd.DataFrame) -> pd.DataFrame:
         """
-        Orchestrates the execution of a SQL model for staging.
+        Transform using Pandas (in-memory)
+        """
+        df['date'] = pd.to_datetime(df['datetime']).dt.date
 
-        Parameters:
-        - model (str): Name of the SQL model (without .sql extension)
-        - engine: SQLAlchemy engine for DB connection
-        - models_path (str): Directory containing SQL model files
-        - target_table (str): Target table name for staging
+        daily_df = (
+            df.groupby(['stock_code', 'date']).agg(
+                min_open=('open', 'min'),
+                max_close=('close', 'max'),
+                daily_high=('high', 'max'),
+                daily_low=('low', 'min'),
+                daily_volume=('volume', 'sum'),
+                daily_trades=('numberOfTrades', 'sum')
+            )
+            .reset_index()
+        )
 
-        Returns:
-        - bool: True if successful, False otherwise
+        # Compute daily_return as max_close - min_open
+        daily_df['daily_return'] = daily_df['max_close'] - daily_df['min_open']
+        
+        return daily_df
+
+    @staticmethod
+    def transform_sql(model: str, engine, models_path: str, target_table: str) -> bool:
+        """
+        Transform using SQL (Jinja + SQL execution)
         """
         model_file = f"{model}.sql"
         model_path = os.path.join(models_path, model_file)
@@ -29,10 +44,15 @@ class Transform:
         with open(model_path) as f:
             raw_sql = f.read()
 
-        # Render template with Jinja
-        parsed_sql = j2.Template(raw_sql).render(target_table=target_table)
+        # Render Jinja template
+        template = j2.Template(raw_sql)
+        parsed_sql = template.render(target_table=target_table)
 
         # Execute SQL
-        result = engine.execute(parsed_sql)
-        logging.info(f"Successfully built model: {model}, rows affected: {result.rowcount}")
-        return True
+        try:
+            result = engine.execute(parsed_sql)
+            logging.info(f"Successfully executed SQL transform for model: {model}")
+            return True
+        except Exception as e:
+            logging.error(f"Error executing SQL for model {model}: {e}")
+            return False
