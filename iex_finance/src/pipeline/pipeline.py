@@ -1,83 +1,84 @@
-import os 
-from database.postgres import PostgresDB
-from etl.transform import Transform
-from etl.extract import Extract
-from etl.load import Load
-import yaml 
-from io import StringIO
+import os
+import yaml
 import logging
-from utility.metadata_logging import MetadataLogging
+from io import StringIO
 import datetime as dt
 import pandas as pd
-def pipeline()->bool:
+
+from database.postgres import PostgresDB
+from etl.extract import Extract
+from etl.transform import Transform
+from etl.load import Load
+from utility.metadata_logging import MetadataLogging
+
+def pipeline() -> bool:
+    """
+    Main ETL pipeline to extract, transform, and load stock intraday data.
+    Logs progress and metadata about the run.
     
-    # set up logging 
-    run_log = StringIO()
-    logging.basicConfig(stream=run_log,level=logging.INFO, format="[%(levelname)s][%(asctime)s]: %(message)s")
-        
-    # set up metadata logger 
-    metadata_logger = MetadataLogging(db_target="target")
-    with open("config.yaml") as stream:
-        config = yaml.safe_load(stream)
-        
-    metadata_log_table = config["meta"]["log_table"]
+    Returns:
+        bool: True if pipeline completes successfully
+    """
+
+    # Basic logging configuration with log capture stream and initial format
+    logging.basicConfig(
+        level=logging.INFO,
+        format="[%(levelname)s][%(asctime)s]: %(message)s"
+    )
+
+    # Initialize metadata logger for tracking pipeline runs
+    metadata_logger = MetadataLogging()
+    metadata_log_table = "pipeline_log"
+
+    # Get the latest run ID for logging continuity
     metadata_log_run_id = metadata_logger.get_latest_run_id(db_table=metadata_log_table)
+
+    # Log start of this run in metadata table
     metadata_logger.log(
         run_timestamp=dt.datetime.now(),
         run_status="started",
-        run_id=metadata_log_run_id, 
-        run_config=config,
+        run_id=metadata_log_run_id,
         db_table=metadata_log_table
     )
-    logging.basicConfig(format="[%(levelname)s][%(asctime)s][%(filename)s]: %(message)s", level=logging.INFO) # format: https://docs.python.org/3/library/logging.html#logging.LogRecord
-    iex_api_key=os.environ.get("iex_api_key")
-        
+
+    # Read API key for data extraction from environment variables (stored in S3, grant permission to ECS)
+    iex_api_key = os.environ.get("iex_api_key")
+
+    # Extract phase
     logging.info("Commencing extract")
-    # extract 
     df = Extract.extract_stocks(iex_api_key)
     logging.info("Extract complete")
-    logging.info("Commencing extract from stock csv")
-    logging.info("Extract complete")
 
-    # transform 
+
+    # Transform phase
     logging.info("Commencing transform")
     df_transformed = Transform.transform(df)
     logging.info("Transform complete")
-    
-    #load file 
-    Load.load(
-        df=df_transformed,
-        load_target="file",
-        target_file_directory="data",
-        target_file_name="stock.parquet",
-    )
-    logging.info("File load complete")
 
+
+    # Create a database connection engine
     engine = PostgresDB.create_pg_engine()
-    
-    # load database (upsert)
+
+    # Load transformed data into the database with upsert logic
     logging.info("Commencing database load")
     Load.load(
         df=df_transformed,
         load_target="database",
         target_database_engine=engine,
         target_table_name="stocks_intraday"
-    )  
+    )
     logging.info("Database load complete")
-    df_staged = Transform.transform_staging(model="staging_stock", engine=engine, models_path="models/transform")
-    
-    logging.info("staging_stock transformed from stocks_intraday")
 
+    # Log successful completion in metadata table, including run logs
     logging.info("Pipeline run successful")
     metadata_logger.log(
         run_timestamp=dt.datetime.now(),
         run_status="completed",
-        run_id=metadata_log_run_id, 
-        run_config=config,
-        run_log=run_log.getvalue(),
+        run_id=metadata_log_run_id,
         db_table=metadata_log_table
     )
-    print(run_log.getvalue())
-    
+
+    return True
+
 if __name__ == "__main__":
     pipeline()
