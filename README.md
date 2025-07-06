@@ -110,7 +110,6 @@ The Dockerfile is initialized outside the src directory. The environment variabl
 - Create a private S3 bucket to store the .env file, which will hold runtime variables and secrets.
 - Create a PostgreSQL database in the cloud using the AWS RDS service.
 - Create an appropriate inline IAM policy required by the ECS service.
-- Create an appropriate IAM policy for users to run ECS tasks.
 - Connect the Dockerfile with ECS credentials and update the credentials to use the RDS server endpoint.
 - Run the Dockerfile on ECS and maintain logs of the execution.
 - For cron scheduling, an interval of ten minutes is configured. Since the API is updated on a minute-by-minute basis, a preferred interval of twenty minutes is recommended.
