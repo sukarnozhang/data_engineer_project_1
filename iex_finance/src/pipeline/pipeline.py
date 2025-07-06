@@ -2,11 +2,8 @@ import os
 import logging
 from io import StringIO
 import datetime as dt
-
 from database.postgres import PostgresDB
-from etl.extract import Extract
-from etl.transform import Transform
-from etl.load import Load
+from etl.extract import Extract, Transform, Load
 from utility.metadata_logging import MetadataLogging
 
 def pipeline() -> bool:

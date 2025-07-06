@@ -50,7 +50,7 @@ class Transform:
 
         # Execute SQL
         try:
-            result = engine.execute(parsed_sql)
+            engine.execute(parsed_sql)
             logging.info(f"Successfully executed SQL transform for model: {model}")
             return True
         except Exception as e:

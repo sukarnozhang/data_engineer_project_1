@@ -84,53 +84,35 @@ Sample Output of the transformation :
 <img width="1106" src="https://github.com/sukarnozhang/data_engineer_project_1/blob/main/iex_finance/src/data/sample_output.png">
 
 ## Load
-In loading the database to the pgadmin, tables need to be loaded. If tables are first time loaded then new table is inserted in the pgadmin. If new data from website comes in, "Upsert" function is utilised.
-
+When loading the database into pgAdmin, tables need to be loaded. If a table is being loaded for the first time, a new table is created in pgAdmin. If new data comes from the website, the upsert function is used.
 
 ## ETL Pipeline
 To run the pipeline in your local system, execute the following command:
 ```sh
 cd <src folder in local system>
 
-export PYTHONPATH=`pwd` # for windows: set PYTHONPATH=%cd%
+export PYTHONPATH=`pwd`
 
 python etl/pipeline/pipeline.py
 ```
-The ETL pipeline begins with metadata logging initialization using logging.info to track history, as implemented in the utility file metadata_logging.py. Logs are recorded in the table specified by log_table: pipeline_logs.
+The ETL pipeline begins with metadata logging initialization using logging.info to track its history, as implemented in the utility file metadata_logging.py. Logs are recorded in the table specified by log_table: pipeline_logs.
 
 
 ## Testing
-One unit testing are applied on the transformational datas on table stocks_intraday and staging_stock through pytest command after running the pipeline.jinja file to structure the mock table.
+Unit testing is applied to the transformed data in the stocks_intraday table to create weekly aggregated data.
+
+
 ## Docker file
-(path="\iex_finance\Dockerfile")
-(env file path = "\iex_finance\.env")
-The docker file is initialised outside the src directory. The environment variables foe docker file are initilaised on .env file which is configurable according to users credentials.
-## Code:
-Login in your docker hub in terminal before executing these commands.
+The Dockerfile is initialized outside the src directory. The environment variables for the Dockerfile are defined in the .env file, which can be configured according to the user’s credentials.
 
-Build the docker image using the following command
-```sh
-docker build . -t dockerhub_username/<name_of_your_tag>
-```
-Run the docker image
-```sh
-docker run --env-file .env <image_name>
-```
-docker push image
-## PostgreSQL Database
-In the sql query , go the desired database as in configuration. 
 
-Code:
-Select * from <table_name>;
-
-Table name can be stocks_intraday, staging_stocks, pipeline_logs
 ## AWS Configuration
--Create private S3 Bucket to place the .env file which will store runtime variables and secrets.
--Create Postgres Database in Cloud using AWS RDS Web Service.
--Create appropriate inline IAM policy that would be required by the ECS service.
--Create appropriate IAM policy for the users to run the ECS tasks.
--Connect Docker file with ECS credentials ##change the credentials to Endpoint of RDS server.
--Run the docker file on the ECS and keep logs of running.
--For Cron scheduling, the time period of ten minutes is taken.Since,the API is updated minute to minute basis, so interval of twenty minutes is preferred.
+- Create a private S3 bucket to store the .env file, which will hold runtime variables and secrets.
+- Create a PostgreSQL database in the cloud using the AWS RDS service.
+- Create an appropriate inline IAM policy required by the ECS service.
+- Create an appropriate IAM policy for users to run ECS tasks.
+- Connect the Dockerfile with ECS credentials and update the credentials to use the RDS server endpoint.
+- Run the Dockerfile on ECS and maintain logs of the execution.
+- For cron scheduling, an interval of ten minutes is configured. Since the API is updated on a minute-by-minute basis, a preferred interval of twenty minutes is recommended.
 
 
