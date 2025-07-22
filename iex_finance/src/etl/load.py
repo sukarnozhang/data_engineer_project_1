@@ -1,4 +1,4 @@
-from sqlalchemy import Table, Column, String, Float, Date
+from sqlalchemy import Table, Column, String, Float, Date, MetaData
 from sqlalchemy.dialects import postgresql
 import pandas as pd
 import os
@@ -22,8 +22,9 @@ class Load:
 
         # Define the database table schema mapping
         # This creates an in-memory Table object to assist with SQL generation
+        meta = MetaData()
         stock_price_table = Table(
-            target_table_name,
+            target_table_name, meta,
             Column("stock_code", String, primary_key=True),  # Stock ticker symbol, part of composite PK
             Column("date", Date, primary_key=True),          # Trading date, part of composite PK for uniqueness per day
             Column("min_open", Float),                       # Minimum open price for the day
@@ -34,7 +35,8 @@ class Load:
             Column("daily_trades", Float),                    # Total number of trades executed that day
             Column("daily_return", Float)                     # Net price change (max close - min open)
         )
-
+        meta.create_all(target_database_engine)
+        
         # Prepare an INSERT statement using PostgreSQL dialect's insert()
         # The data is converted from the DataFrame to a list of dict records
         insert_stmt = postgresql.insert(stock_price_table).values(df.to_dict(orient='records'))
